@@ -1,0 +1,84 @@
+1. Цель работы
+Создать систему мониторинга процессов в Linux, включающую:
+
+Скрипт для мониторинга процессов
+
+Настройку автозагрузки скрипта
+
+Настройку регулярного выполнения через cron
+
+Мониторинг загрузки системы
+
+2. Выполненные действия
+2.1. Создание скрипта monitor.sh
+Создан скрипт /usr/local/bin/monitor.sh со следующим содержанием:
+
+bash
+#!/bin/bash
+
+LOG_FILE="/var/log/processes.log"
+LOAD_FILE="/var/log/system_load.log"
+
+# Запись времени и информации о процессах
+echo "=== $(date) ===" >> $LOG_FILE
+ps -ef >> $LOG_FILE
+echo "" >> $LOG_FILE
+
+# Запись информации о загрузке системы
+uptime >> $LOAD_FILE
+Установлены права на выполнение:
+
+bash
+sudo chmod +x /usr/local/bin/monitor.sh
+2.2. Настройка автозагрузки
+Для добавления в автозагрузку создан сервисный файл /etc/systemd/system/monitor.service:
+
+ini
+[Unit]
+Description=Process Monitoring Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/monitor.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+Активация сервиса:
+
+bash
+sudo systemctl daemon-reload
+sudo systemctl enable monitor.service
+sudo systemctl start monitor.service
+2.3. Настройка cron-задачи
+Добавлена задача в crontab (выполнять каждую минуту):
+
+bash
+(crontab -l 2>/dev/null; echo "* * * * * /usr/local/bin/monitor.sh") | crontab -
+2.4. Проверка загрузки системы
+Выполнена команда для записи текущей загрузки:
+
+bash
+uptime > /var/log/system_load.log
+3. Проверка работы
+3.1. Проверка лог-файлов
+bash
+tail -f /var/log/processes.log
+tail -f /var/log/system_load.log
+3.2. Проверка сервиса
+bash
+systemctl status monitor.service
+3.3. Проверка cron
+bash
+crontab -l
+4. Вывод
+Создана комплексная система мониторинга, которая:
+
+Регулярно записывает информацию о процессах
+
+Автоматически запускается при загрузке системы
+
+Дополнительно выполняется каждую минуту через cron
+
+Сохраняет данные о загрузке системы
