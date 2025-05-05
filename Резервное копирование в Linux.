@@ -1,0 +1,147 @@
+1. Цель работы
+Освоить основные методы резервного копирования в Linux
+
+Научиться создавать и восстанавливать резервные копии файлов и каталогов
+
+Изучить инструменты для резервирования системных файлов и баз данных
+
+Разработать стратегию автоматизированного резервного копирования
+
+2. Выполненные действия
+2.1. Работа с архиватором tar
+Создание резервной копии:
+
+bash
+tar -cvpzf /backups/home_user1_$(date +%Y%m%d).tar.gz /home/user1
+Опции:
+
+-c - создать архив
+
+-v - подробный вывод
+
+-p - сохранить права
+
+-z - сжатие gzip
+
+-f - указание файла
+
+Восстановление:
+
+bash
+tar -xvpzf /backups/home_user1_20231115.tar.gz -C /restore/path
+2.2. Синхронизация с rsync
+Локальное копирование:
+
+bash
+rsync -avh --progress /home/user1 /backups/
+Удаленная синхронизация:
+
+bash
+rsync -avhz -e ssh /home/user1 user@192.168.1.100:/backups/
+2.3. Инкрементное копирование с BorgBackup
+Инициализация репозитория:
+
+bash
+borg init --encryption=repokey /backups/borg_repo
+Создание резервной копии:
+
+bash
+borg create /backups/borg_repo::user1_home_{now} /home/user1
+2.4. Резервирование системных файлов
+Критичных каталогов:
+
+bash
+sudo tar -cvpzf /backups/system_etc_$(date +%Y%m%d).tar.gz /etc
+2.5. Резервное копирование баз данных
+MySQL/MariaDB:
+
+bash
+mysqldump -u root -p --all-databases > /backups/mysql_full_$(date +%Y%m%d).sql
+PostgreSQL:
+
+bash
+pg_dumpall -U postgres > /backups/pgsql_full_$(date +%Y%m%d).sql
+3. Автоматизация резервного копирования
+3.1. Пример crontab для резервного копирования
+bash
+0 2 * * * /usr/bin/tar -cvpzf /backups/daily_home_$(date +\%Y\%m\%d).tar.gz /home
+0 3 * * 0 /usr/bin/mysqldump -u root -pPASSWORD --all-databases > /backups/weekly_mysql_$(date +\%Y\%m\%d).sql
+3.2. Проверка целостности резервных копий
+bash
+# Для tar
+gzip -t /backups/home_user1_20231115.tar.gz
+
+# Для Borg
+borg check /backups/borg_repo
+4. Выводы и рекомендации
+4.1. Основные выводы
+Наиболее универсальным инструментом является tar для создания полных архивов
+
+rsync оптимален для регулярной синхронизации данных
+
+BorgBackup предоставляет эффективное инкрементное копирование
+
+Для баз данных необходимо использовать специализированные утилиты
+
+4.2. Рекомендации по стратегии
+Правило 3-2-1:
+
+3 копии данных
+
+2 разных типа носителей
+
+1 копия в другом месте
+
+График копирования:
+
+Ежедневные инкрементные копии
+
+Еженедельные полные копии
+
+Ежемесячные архивные копии
+
+Мониторинг:
+
+Проверка успешности выполнения заданий
+
+Контроль свободного места
+
+Регулярная проверка целостности
+
+4.3. Дополнительные рекомендации
+Использовать LVM для создания согласованных копий
+
+Шифровать резервные копии перед отправкой в облако
+
+Вести журнал операций резервного копирования
+
+Регулярно тестировать процедуру восстановления
+
+5. Приложения
+5.1. Полезные команды
+bash
+# Просмотр содержимого архива
+tar -tvf backup.tar.gz
+
+# Проверка места на диске
+df -h /backups
+
+# Статистика использования Borg
+borg list /backups/borg_repo
+5.2. Пример скрипта для резервного копирования
+bash
+#!/bin/bash
+DATE=$(date +%Y%m%d)
+BACKUP_DIR="/backups"
+LOG_FILE="$BACKUP_DIR/backup_$DATE.log"
+
+# Архивирование домашних каталогов
+tar -cvpzf $BACKUP_DIR/home_$DATE.tar.gz /home > $LOG_FILE 2>&1
+
+# Проверка успешности
+if [ $? -eq 0 ]; then
+    echo "Backup completed successfully" >> $LOG_FILE
+else
+    echo "Backup failed" >> $LOG_FILE
+    mail -s "Backup Error" admin@example.com < $LOG_FILE
+fi
