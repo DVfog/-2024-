@@ -1,0 +1,88 @@
+1. Установка и настройка rsyslog
+1.1. Установка rsyslog
+bash
+sudo apt update  
+sudo apt install rsyslog -y  
+1.2. Включение и запуск службы
+bash
+sudo systemctl enable rsyslog  
+sudo systemctl start rsyslog  
+2. Настройка логирования действий sudo
+2.1. Редактирование файла /etc/sudoers
+Добавлена строка для логирования всех команд sudo:
+
+bash
+sudo visudo  
+Добавлено:
+
+Defaults logfile="/var/log/sudo.log"  
+2.2. Проверка логирования
+После выполнения любой команды с sudo логи записываются в /var/log/sudo.log.
+
+3. Настройка пересылки логов на удаленный сервер
+3.1. Настройка отправляющего сервера (клиент)
+Редактируем /etc/rsyslog.conf:
+
+bash
+sudo nano /etc/rsyslog.conf  
+Добавляем в конец файла:
+
+*.* @IP_удаленного_сервера:514  
+(где IP_удаленного_сервера — адрес второго Linux-сервера)
+
+Перезапускаем rsyslog:
+
+bash
+sudo systemctl restart rsyslog  
+3.2. Настройка принимающего сервера (сервер логов)
+Включаем прием логов по UDP (или TCP):
+
+bash
+sudo nano /etc/rsyslog.conf  
+Раскомментируем:
+
+module(load="imudp")  
+input(type="imudp" port="514")  
+Добавляем правила для сохранения логов в /var/log/rsyslog/%HOSTNAME%/%PROGRAMNAME%.log:
+
+$template RemoteLogs, "/var/log/rsyslog/%HOSTNAME%/%PROGRAMNAME%.log"  
+*.* ?RemoteLogs  
+Создаем директорию и даем права:
+
+bash
+sudo mkdir -p /var/log/rsyslog  
+sudo chmod -R 777 /var/log/rsyslog  
+Перезапускаем rsyslog:
+
+bash
+sudo systemctl restart rsyslog  
+4. Разделение логов по уровням (err, warning, info)
+4.1. Настройка фильтрации по уровням
+На принимающем сервере редактируем /etc/rsyslog.conf:
+
+$template ErrorLogs, "/var/log/rsyslog/%HOSTNAME%/error.log"  
+$template WarningLogs, "/var/log/rsyslog/%HOSTNAME%/warning.log"  
+$template InfoLogs, "/var/log/rsyslog/%HOSTNAME%/info.log"  
+
+*.err ?ErrorLogs  
+*.warning ?WarningLogs  
+*.info ?InfoLogs  
+Перезапускаем rsyslog:
+
+bash
+sudo systemctl restart rsyslog  
+4.2. Проверка работы
+Логи уровня error будут записываться в /var/log/rsyslog/%HOSTNAME%/error.log.
+
+Логи уровня warning — в /var/log/rsyslog/%HOSTNAME%/warning.log.
+
+Логи уровня info — в /var/log/rsyslog/%HOSTNAME%/info.log.
+
+Заключение
+Установлен и настроен rsyslog для централизованного сбора логов.
+
+Реализовано логирование действий sudo в отдельный файл.
+
+Настроена пересылка логов на удаленный сервер с автоматической сортировкой по хостам и программам.
+
+Логи разделены по уровням (error, warning, info) в разные файлы.
